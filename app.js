@@ -1,12 +1,12 @@
 const dotenv = require('dotenv');
-dotenv.config();
+dotenv.config({ path: __dirname + '/.env' });
 
 const express = require('express');
 const app = express();
 const port = process.env.PORT;
 
 app.get('/', (req, res) => {
-  res.send(`${process.env.NAME} online test`);
+  res.send(`${process.env.NAME} online`);
 });
 
 app.listen(port, () => {
