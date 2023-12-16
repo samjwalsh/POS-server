@@ -6,9 +6,9 @@ const app = express();
 const port = process.env.PORT;
 
 app.get('/', (req, res) => {
-  res.send(process.env.NAME);
+  res.send(`${process.env.NAME} online`);
 });
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
+  console.log(`POS-server listening on port ${port}`);
 });
