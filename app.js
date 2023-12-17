@@ -15,7 +15,8 @@ const uri = `mongodb://${user}:${pass}@${server}:${dbPort}/${database}?authSourc
 const app = express();
 const port = process.env.PORT;
 
-app.use(express.json());
+app.use(express.json({limit: '50mb'}));
+
 
 app.get('/api/connectionTest', (req, res) => {
   res.send(`${process.env.NAME} online`);
