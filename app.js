@@ -9,7 +9,7 @@ const user = process.env.DB_USER;
 const pass = process.env.DB_PASS;
 const database = process.env.DB_NAME;
 const dbPort = process.env.DB_PORT;
-const todaysOrders = require('./model');
+const todaysorders = require('./model');
 const uri = `mongodb://${user}:${pass}@${server}:${dbPort}/${database}?authSource=admin`;
 
 const app = express();
@@ -25,14 +25,65 @@ app.get('/api/syncOrders', async (req, res) => {
   if (req.body.key !== process.env.SYNC_KEY)
     return res.status(403).send('Forbidden');
 
-  const receivedOrders = req.body.orders;
+  const clientOrders = req.body.orders;
   const shop = req.body.shop;
   const till = req.body.till;
 
-  const dbOrders = await todaysOrders.find({shop}).exec();
-  console.log(dbOrders);
+  const dbOrders = await todaysorders.find({ shop }).exec();
 
-  res.status(200).send('yesh');
+  const ordersToDeleteOnDb = [];
+  const ordersMissingFromDb = [];
+  const ordersToDeleteOnClient = [];
+  const ordersMissingFromClient = [];
+
+  // check for deleted orders and orders missing from db
+  clientOrders.forEach((clientOrder) => {
+    let foundInDb = false;
+    dbOrders.forEach((dbOrder) => {
+      if (clientOrder.time === dbOrder.time) {
+        // The order has been found
+        if (clientOrder.deleted && !dbOrder.deleted) {
+          ordersToDeleteOnDb.push(clientOrder);
+        }
+        foundInDb = true;
+      }
+    });
+    if (!foundInDb) {
+      ordersMissingFromDb.push(clientOrder);
+    }
+  });
+
+  // update the relevant orders in the db
+  await todaysorders.insertMany(ordersMissingFromDb);
+
+  ordersToDeleteOnDb.forEach(async (deletedOrder) => {
+    await todaysorders.findOneAndUpdate(
+      { time: deletedOrder.time },
+      { deleted: true }
+    );
+  });
+
+  // check for orders missing from client and orders deleted on DB but not client
+  dbOrders.forEach((dbOrder) => {
+    let foundInClient = false;
+    clientOrders.forEach((clientOrder) => {
+      if (clientOrder.time === dbOrder.time) {
+        // The order has been found
+        if (!clientOrder.deleted && dbOrder.deleted) {
+          ordersToDeleteOnClient.push(dbOrder);
+        }
+        foundInClient = true;
+      }
+    });
+    if (!foundInClient) {
+      ordersMissingFromClient.push(dbOrder);
+    }
+  });
+
+  res.status(200).json({
+    missingOrders: ordersMissingFromClient,
+    deletedOrders: ordersToDeleteOnClient,
+  });
 });
 
 app.listen(port, () => {

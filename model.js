@@ -2,12 +2,6 @@ const mongoose = require('mongoose');
 
 const Schema = mongoose.Schema;
 
-let addonsSchema = new Schema({
-  name: {
-    type: String,
-  },
-});
-
 let itemSchema = new Schema({
   name: {
     type: String,
@@ -19,7 +13,7 @@ let itemSchema = new Schema({
     type: Number,
   },
   addons: {
-    type: [addonsSchema],
+    type: [String],
   },
 });
 
@@ -47,7 +41,7 @@ let order = new Schema(
       type: Boolean,
     },
   },
-  { collection: 'todaysOrders' }
+  { collection: 'todaysorders' }
 );
 
-module.exports = mongoose.model('todaysOrders', order);
+module.exports = mongoose.model('todaysorders', order);
