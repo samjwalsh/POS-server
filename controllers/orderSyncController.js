@@ -215,6 +215,9 @@ app.get('/api/syncOrders', async (req, res) => {
     missingOrders: ordersToAddInClient,
     deletedOrderIds: orderIdsToDeleteInClient,
     completedEodIds: orderIdsToEodFullyInClient,
+    OrdersMissingInDb: ordersToAddInDB.length,
+    OrdersDeletedInDb: orderIdsToDeleteInDb.length,
+    EodsCompletedInDb: ordersToEodInDb.length,
   });
 });
 
