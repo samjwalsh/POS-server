@@ -2,34 +2,16 @@ const mongoose = require('mongoose');
 
 const Schema = mongoose.Schema;
 
-let itemSchema = new Schema({
-  name: {
-    type: String,
-  },
-  price: {
-    type: Number,
-  },
-  quantity: {
-    type: Number,
-  },
-  addons: {
-    type: [String],
-  },
-});
+const itemSchema = require('./itemSchema');
 
 let order = new Schema(
   {
+    id: {
+      type: String,
+      unique: true,
+    },
     time: {
       type: Number,
-    },
-    paymentMethod: {
-      type: String,
-    },
-    subtotal: {
-      type: Number,
-    },
-    items: {
-      type: [itemSchema],
     },
     shop: {
       type: String,
@@ -39,6 +21,18 @@ let order = new Schema(
     },
     deleted: {
       type: Boolean,
+    },
+    eod: {
+      type: Boolean,
+    },
+    subtotal: {
+      type: Number,
+    },
+    paymentMethod: {
+      type: String,
+    },
+    items: {
+      type: [itemSchema],
     },
   },
   { collection: 'todaysorders' }
