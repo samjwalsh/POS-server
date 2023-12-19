@@ -225,8 +225,8 @@ app.get('/api/syncOrders', async (req, res) => {
     ${ordersToEodInDb.length} EODed\n
     Client Changes:\n
     ${ordersToAddInClient.length} Added\n
-    ${orderIdsToDeleteInClient} Deleted\n
-    ${orderIdsToEodFullyInClient} EODed`);
+    ${orderIdsToDeleteInClient.length} Deleted\n
+    ${orderIdsToEodFullyInClient.length} EODed`);
 
   res.status(200).json({
     missingOrders: ordersToAddInClient,
