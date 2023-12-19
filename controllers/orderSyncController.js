@@ -71,7 +71,7 @@ app.get('/api/syncOrders', async (req, res) => {
   for (const clientOrder of clientOrders) {
     let orderFoundInDb = false;
     for (const dbOrder of dbOrders) {
-      if (clientOrder.id === dbOrder.id) {
+      if (clientOrder.id == dbOrder.id) {
         // This means the DB has the order
         orderFoundInDb = true;
         // But now check if it is fully up to date with the client
@@ -86,6 +86,8 @@ app.get('/api/syncOrders', async (req, res) => {
         if (clientOrder.eod && !dbOrder.eod) {
           orderIdsToEodInDb.push(dbOrder.id);
         }
+
+        break;
       }
     }
     // Given the order is missing, check if should be added to todays orders and if it should be EODed after
@@ -98,8 +100,10 @@ app.get('/api/syncOrders', async (req, res) => {
   for (const dbOrder of dbOrders) {
     let orderFoundInClient = false;
     for (const clientOrder of clientOrders)
-      if (clientOrder.id === dbOrder.id) orderFoundInClient = true;
-
+      if (clientOrder.id === dbOrder.id) {
+        orderFoundInClient = true;
+        break;
+      }
     if (!orderFoundInClient) {
       ordersToAddInClient.push(dbOrder);
     }
@@ -108,12 +112,20 @@ app.get('/api/syncOrders', async (req, res) => {
   try {
     // Add any orders that were missing
     await todaysorders.insertMany(ordersToAddInDB);
+  } catch (e) {
+    console.log(e);
+  }
 
+  try {
     // Delete any orders that should havebeen deleted
     await todaysorders
       .updateMany({ id: { $in: orderIdsToDeleteInDb } }, { deleted: true })
       .exec();
+  } catch (e) {
+    console.log(e);
+  }
 
+  try {
     // EOD any orders that should have been EODed
     await todaysorders
       .updateMany({ id: { $in: orderIdsToEodInDb } }, { eod: true })
@@ -181,6 +193,7 @@ app.get('/api/syncOrders', async (req, res) => {
             if (orderToEod.deleted && !order.deleted) {
               order.deleted = true;
             }
+            break;
           }
         }
         if (unique) {
