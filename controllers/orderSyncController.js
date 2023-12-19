@@ -26,8 +26,11 @@ connection.once('open', function () {
 app.get('/api/syncOrders', async (req, res) => {
   if (req.body.key !== process.env.SYNC_KEY) return res.status(403);
 
+  const startTime = new Date();
+
   const clientOrders = req.body.orders;
   const shop = req.body.shop;
+  const till = req.body.till;
 
   const dbOrders = await todaysorders.find({ shop }).exec();
 
@@ -210,7 +213,21 @@ app.get('/api/syncOrders', async (req, res) => {
   await todaysorders
     .deleteMany({ id: { $in: orderIdsToEodFullyInClient } })
     .exec();
-  console.log(ordersToAddInDB.length);
+
+  console.log(`
+    -----
+    Execution Time: ${new Date() - startTime}\n 
+    Shop: ${shop}\n
+    Till: ${till}\n
+    DB Changes:\n
+    ${ordersToAddInDB.length} Added\n
+    ${orderIdsToDeleteInDb.length} Deleted\n
+    ${ordersToEodInDb.length} EODed\n
+    Client Changes:\n
+    ${ordersToAddInClient.length} Added\n
+    ${orderIdsToDeleteInClient} Deleted\n
+    ${orderIdsToEodFullyInClient} EODed`);
+
   res.status(200).json({
     missingOrders: ordersToAddInClient,
     deletedOrderIds: orderIdsToDeleteInClient,
