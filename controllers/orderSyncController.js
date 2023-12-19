@@ -210,14 +210,14 @@ app.get('/api/syncOrders', async (req, res) => {
   await todaysorders
     .deleteMany({ id: { $in: orderIdsToEodFullyInClient } })
     .exec();
-
+  console.log(ordersToAddInDB.length);
   res.status(200).json({
     missingOrders: ordersToAddInClient,
     deletedOrderIds: orderIdsToDeleteInClient,
     completedEodIds: orderIdsToEodFullyInClient,
-    OrdersMissingInDb: ordersToAddInDB.length,
-    OrdersDeletedInDb: orderIdsToDeleteInDb.length,
-    EodsCompletedInDb: ordersToEodInDb.length,
+    ordersMissingInDb: ordersToAddInDB.length,
+    ordersDeletedInDb: orderIdsToDeleteInDb.length,
+    eodsCompletedInDb: ordersToEodInDb.length,
   });
 });
 
