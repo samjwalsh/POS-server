@@ -215,7 +215,6 @@ app.get('/api/syncOrders', async (req, res) => {
     .exec();
 
   console.log(`
-    -----
 Execution Time: ${new Date() - startTime}
 Shop: ${shop}
 Till: ${till}
