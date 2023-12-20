@@ -216,16 +216,16 @@ app.get('/api/syncOrders', async (req, res) => {
 
   console.log(`
     -----
-    Execution Time: ${new Date() - startTime}\n 
-    Shop: ${shop}\n
-    Till: ${till}\n
-    DB Changes:\n
-    ${ordersToAddInDB.length} Added\n
-    ${orderIdsToDeleteInDb.length} Deleted\n
-    ${ordersToEodInDb.length} EODed\n
-    Client Changes:\n
-    ${ordersToAddInClient.length} Added\n
-    ${orderIdsToDeleteInClient.length} Deleted\n
+Execution Time: ${new Date() - startTime}
+Shop: ${shop}
+Till: ${till}
+  DB Changes:
+    ${ordersToAddInDB.length} Added
+    ${orderIdsToDeleteInDb.length} Deleted
+    ${ordersToEodInDb.length} EODed
+  Client Changes:
+    ${ordersToAddInClient.length} Added
+    ${orderIdsToDeleteInClient.length} Deleted
     ${orderIdsToEodFullyInClient.length} EODed`);
 
   res.status(200).json({
