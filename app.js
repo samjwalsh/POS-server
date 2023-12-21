@@ -18,9 +18,7 @@ const uri = `mongodb://${user}:${pass}@${server}:${dbPort}/${database}?authSourc
 mongoose.connect(uri);
 
 app.get('/api/connectionTest', (req, res) => {
-  console.log(
-    'Ping from ' + (req.headers['x-forwarded-for'] || req.socket.remoteAddress)
-  );
+  console.log('Connection Test');
   res.send(`${process.env.NAME} online`);
 });
 
