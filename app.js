@@ -18,15 +18,16 @@ const uri = `mongodb://${user}:${pass}@${server}:${dbPort}/${database}?authSourc
 mongoose.connect(uri);
 
 app.get('/api/connectionTest', (req, res) => {
-  console.log('Connection test succeeded')
+  console.log(
+    'Ping from ' + (req.headers['x-forwarded-for'] || req.socket.remoteAddress)
+  );
   res.send(`${process.env.NAME} online`);
 });
 
-app.use(require('./controllers/orderSyncController'))
+app.use(require('./controllers/orderSyncController'));
 
-app.use(require('./controllers/voucherController'))
+app.use(require('./controllers/voucherController'));
 
 app.listen(port, () => {
   console.log(`POS-server listening on port ${port}`);
 });
-
