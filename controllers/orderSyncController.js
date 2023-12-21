@@ -4,7 +4,7 @@ dotenv.config({ path: __dirname + '/.env' });
 const express = require('express');
 const mongoose = require('mongoose');
 
-const auth = require('./authController')
+const auth = require('./authController');
 
 const app = express.Router();
 
@@ -16,7 +16,6 @@ const dbPort = process.env.DB_PORT;
 const todaysorders = require('../models/todaysorders/todaysOrderSchema');
 const Day = require('../models/daySheets/daySchema');
 
-
 const connection = mongoose.connection;
 
 connection.once('open', function () {
@@ -24,7 +23,6 @@ connection.once('open', function () {
 });
 
 app.get('/api/syncOrders', auth, async (req, res) => {
-
   const startTime = new Date();
 
   const clientOrders = req.body.orders;
@@ -213,18 +211,13 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     .deleteMany({ id: { $in: orderIdsToEodFullyInClient } })
     .exec();
 
-  console.log(`
-Execution Time: ${new Date() - startTime}
-Shop: ${shop}
-Till: ${till}
-  DB Changes:
-    ${ordersToAddInDB.length} Added
-    ${orderIdsToDeleteInDb.length} Deleted
-    ${ordersToEodInDb.length} EODed
-  Client Changes:
-    ${ordersToAddInClient.length} Added
-    ${orderIdsToDeleteInClient.length} Deleted
-    ${orderIdsToEodFullyInClient.length} EODed`);
+  console.log(
+    `Sync Orders(${new Date() - startTime}ms)[${shop}-${till}]: ${
+      ordersToAddInDB.length
+    }-${orderIdsToDeleteInDb.length}-${ordersToEodInDb.length} ${
+      ordersToAddInClient.length
+    }-${orderIdsToDeleteInClient.length}-${orderIdsToEodFullyInClient.length}`
+  );
 
   res.status(200).json({
     missingOrders: ordersToAddInClient,

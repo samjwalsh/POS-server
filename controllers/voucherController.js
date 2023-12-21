@@ -25,6 +25,9 @@ const Voucher = require('../models/vouchers/voucherSchema');
 app.get('/api/createVoucher', auth, async (req, res) => {
   const shop = req.body.shop;
   const till = req.body.till;
+
+  console.log(`Create Voucher Request`);
+
   const value = req.body.value;
   let quantity = req.body.quantity;
 
@@ -75,6 +78,9 @@ app.get('/api/createVoucher', auth, async (req, res) => {
 app.get('/api/redeemVoucher', auth, async (req, res) => {
   const shop = req.body.shop;
   const till = req.body.till;
+
+  console.log(`Redeem Voucher Request`);
+
   const code = req.body.code;
 
   const matchingVoucher = await Voucher.findOneAndUpdate(
@@ -104,6 +110,9 @@ app.get('/api/redeemVoucher', auth, async (req, res) => {
 app.get('/api/checkVoucher', auth, async (req, res) => {
   const shop = req.body.shop;
   const till = req.body.till;
+
+  console.log(`Check Voucher Request`);
+
   const code = req.body.code;
 
   const matchingVoucher = await Voucher.findOne({ code });
