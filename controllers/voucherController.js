@@ -20,7 +20,7 @@ const Voucher = require('../models/vouchers/voucherSchema');
 
 // (async () => {
 //   await Voucher.deleteMany({});
-// })()
+// })();
 
 app.get('/api/createVoucher', auth, async (req, res) => {
   const shop = req.body.shop;
@@ -55,12 +55,12 @@ app.get('/api/createVoucher', auth, async (req, res) => {
     // Now we have our voucher code and we can create the voucher in the DB
 
     const voucher = {
-      date: new Date().toLocaleDateString('en-ie'),
+      dateCreated: new Date().toLocaleDateString('en-ie'),
       value,
       code,
       redeemed: false,
-      shop,
-      till,
+      shopCreated: shop,
+      tillCreated: till,
     };
 
     createdVouchers.push(voucher);
@@ -70,6 +70,54 @@ app.get('/api/createVoucher', auth, async (req, res) => {
   await Voucher.insertMany(createdVouchers);
 
   res.status(200).json(createdVouchers);
+});
+
+app.get('/api/redeemVoucher', auth, async (req, res) => {
+  const shop = req.body.shop;
+  const till = req.body.till;
+  const code = req.body.code;
+
+  const matchingVoucher = await Voucher.findOneAndUpdate(
+    { code },
+    {
+      redeemed: true,
+      dateRedeemed: new Date().toLocaleDateString('en-ie'),
+      shopRedeemed: shop,
+      tillRedeemed: till,
+    }
+  );
+
+  if (matchingVoucher === null) {
+    res.status(200).json({ success: false });
+    return;
+  }
+  if (matchingVoucher.redeemed) {
+    res
+      .status(200)
+      .json({ success: false, dateRedeemed: matchingVoucher.dateRedeemed });
+    return;
+  }
+
+  res.status(200).json({ success: true, value: matchingVoucher.value });
+});
+
+app.get('/api/checkVoucher', auth, async (req, res) => {
+  const shop = req.body.shop;
+  const till = req.body.till;
+  const code = req.body.code;
+
+  const matchingVoucher = await Voucher.findOne({ code });
+
+  if (matchingVoucher === null) {
+    res.status(200).json({ success: true, exists: false });
+    return;
+  }
+  if (matchingVoucher) {
+    res
+      .status(200)
+      .json({ success: true, exists: true, voucher: matchingVoucher });
+    return;
+  }
 });
 
 module.exports = app;

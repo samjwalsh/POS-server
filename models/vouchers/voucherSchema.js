@@ -4,8 +4,14 @@ const Schema = mongoose.Schema;
 
 let voucherSchema = new Schema(
   {
-    date: {
+    dateCreated: {
         type: String
+    },
+    shopCreated: {
+        type: String
+    },
+    tillCreated: {
+        type: Number
     },
     value : {
         type: Number
@@ -17,12 +23,15 @@ let voucherSchema = new Schema(
     redeemed: {
         type: Boolean,
     },
-    shop: {
+    dateRedeemed: {
         type: String
     },
-    till : {
+    shopRedeemed: {
+        type: String
+    },
+    tillRedeemed: {
         type: Number
-    }
+    },
   },
   { collection: 'vouchers' }
 );
