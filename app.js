@@ -18,6 +18,7 @@ const uri = `mongodb://${user}:${pass}@${server}:${dbPort}/${database}?authSourc
 mongoose.connect(uri);
 
 app.get('/api/connectionTest', (req, res) => {
+  console.log('Connection test succeeded')
   res.send(`${process.env.NAME} online`);
 });
 
