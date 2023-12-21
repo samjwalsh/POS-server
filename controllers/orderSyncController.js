@@ -4,6 +4,8 @@ dotenv.config({ path: __dirname + '/.env' });
 const express = require('express');
 const mongoose = require('mongoose');
 
+const auth = require('./authController')
+
 const app = express.Router();
 
 const server = process.env.DB_ADDRESS;
@@ -12,10 +14,8 @@ const pass = process.env.DB_PASS;
 const database = process.env.DB_NAME;
 const dbPort = process.env.DB_PORT;
 const todaysorders = require('../models/todaysorders/todaysOrderSchema');
-const Day = require('../models/orders/daySchema');
-const uri = `mongodb://${user}:${pass}@${server}:${dbPort}/${database}?authSource=admin`;
+const Day = require('../models/daySheets/daySchema');
 
-mongoose.connect(uri);
 
 const connection = mongoose.connection;
 
@@ -23,8 +23,7 @@ connection.once('open', function () {
   console.log('MongoDB connection established successfully');
 });
 
-app.get('/api/syncOrders', async (req, res) => {
-  if (req.body.key !== process.env.SYNC_KEY) return res.status(403);
+app.get('/api/syncOrders', auth, async (req, res) => {
 
   const startTime = new Date();
 
