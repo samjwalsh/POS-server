@@ -81,7 +81,7 @@ app.get('/api/redeemVoucher', auth, async (req, res) => {
 
   console.log(`Redeem Voucher Request`);
 
-  const code = req.body.code;
+  const code = req.body.code.toLowerCase();
 
   const matchingVoucher = await Voucher.findOneAndUpdate(
     { code },
