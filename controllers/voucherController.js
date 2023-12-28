@@ -48,7 +48,7 @@ app.get('/api/createVoucher', auth, async (req, res) => {
     while (!isUnique || !isNotObscene) {
       isUnique = false;
       isNotObscene = false;
-      code = new suid({ dictionary: 'alphanum_lower', length: 5 }).rnd();
+      code = new suid({ dictionary: 'alphanum_upper', length: 5 }).rnd();
       const matchingVouchers = await Voucher.find({ code });
       if (matchingVouchers.length === 0) isUnique = true;
 
@@ -81,7 +81,7 @@ app.get('/api/redeemVoucher', auth, async (req, res) => {
 
   console.log(`Redeem Voucher Request`);
 
-  const code = req.body.code;
+  const code = req.body.code.toUpperCase();
 
   const matchingVoucher = await Voucher.findOneAndUpdate(
     { code },
@@ -113,7 +113,7 @@ app.get('/api/checkVoucher', auth, async (req, res) => {
 
   console.log(`Check Voucher Request`);
 
-  const code = req.body.code;
+  const code = req.body.code.toUpperCase();
 
   const matchingVoucher = await Voucher.findOne({ code });
 
