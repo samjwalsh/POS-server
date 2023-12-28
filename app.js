@@ -25,6 +25,8 @@ app.use(require('./controllers/orderSyncController'));
 
 app.use(require('./controllers/voucherController'));
 
+
+
 app.listen(port, () => {
   console.log(`POS-server listening on port ${port}`);
 });

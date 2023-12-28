@@ -8,11 +8,6 @@ const auth = require('./authController');
 
 const app = express.Router();
 
-const server = process.env.DB_ADDRESS;
-const user = process.env.DB_USER;
-const pass = process.env.DB_PASS;
-const database = process.env.DB_NAME;
-const dbPort = process.env.DB_PORT;
 const todaysorders = require('../models/todaysorders/todaysOrderSchema');
 const Day = require('../models/daySheets/daySchema');
 
@@ -212,11 +207,13 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     .exec();
 
   console.log(
-    `Sync Orders(${new Date() - startTime}ms)[${shop}-${till}]: ${
-      ordersToAddInDB.length
-    }-${orderIdsToDeleteInDb.length}-${ordersToEodInDb.length} ${
-      ordersToAddInClient.length
-    }-${orderIdsToDeleteInClient.length}-${orderIdsToEodFullyInClient.length}`
+    `Sync Orders(${(new Date() - startTime)
+      .toString()
+      .padStart(3, '0')}ms)[${shop}-${till}]: ${ordersToAddInDB.length}-${
+      orderIdsToDeleteInDb.length
+    }-${ordersToEodInDb.length} ${ordersToAddInClient.length}-${
+      orderIdsToDeleteInClient.length
+    }-${orderIdsToEodFullyInClient.length}`
   );
 
   res.status(200).json({
@@ -228,6 +225,5 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     eodsCompletedInDb: ordersToEodInDb.length,
   });
 });
-
 
 module.exports = app;
