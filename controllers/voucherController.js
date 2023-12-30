@@ -27,8 +27,6 @@ app.get('/api/createVoucher', auth, async (req, res) => {
   const shop = req.body.shop;
   const till = req.body.till;
 
-  console.log(`Create Voucher Request`);
-
   const value = req.body.value;
   let quantity = req.body.quantity;
 
@@ -93,8 +91,6 @@ app.get('/api/redeemVoucher', auth, async (req, res) => {
   const shop = req.body.shop;
   const till = req.body.till;
 
-  console.log(`Redeem Voucher Request`);
-
   const code = req.body.code.toUpperCase();
 
   const matchingVoucher = await Voucher.findOneAndUpdate(
@@ -105,6 +101,21 @@ app.get('/api/redeemVoucher', auth, async (req, res) => {
       shopRedeemed: shop,
       tillRedeemed: till,
     }
+  );
+
+  let outputString = '';
+  if (!matchingVoucher) {
+    outputString = `${code} not found`;
+  } else if (matchingVoucher.redeemed) {
+    outputString = `${code} already redeemed`;
+  } else {
+    outputString = `${code} for €${matchingVoucher.value.toFixed(2)}`;
+  }
+
+  console.log(
+    `Redeem Voucher(${(new Date() - startTime)
+      .toString()
+      .padStart(3, '0')}ms)[${shop}-${till}]: ${outputString}`
   );
 
   if (matchingVoucher === null) {
@@ -118,19 +129,6 @@ app.get('/api/redeemVoucher', auth, async (req, res) => {
     return;
   }
 
-  let outputString = '';
-  if (!matchingVoucher) {
-    outputString = `Redeem ${code}, not found`;
-  } else {
-    outputString = `${code} redeemed for €${matchingVoucher.value.toFixed(2)}`;
-  }
-
-  console.log(
-    `Redeem Voucher(${(new Date() - startTime)
-      .toString()
-      .padStart(3, '0')}ms)[${shop}-${till}]: ${outputString}`
-  );
-
   res.status(200).json({ success: true, value: matchingVoucher.value });
 });
 
@@ -140,23 +138,21 @@ app.get('/api/checkVoucher', auth, async (req, res) => {
   const shop = req.body.shop;
   const till = req.body.till;
 
-  console.log(`Check Voucher Request`);
-
   const code = req.body.code.toUpperCase();
 
   const matchingVoucher = await Voucher.findOne({ code });
 
   let outputString = '';
   if (!matchingVoucher) {
-    outputString = `Check ${code}, not found`;
+    outputString = `${code} not found`;
   } else {
-    outputString = `Check ${code} @ €${matchingVoucher.value.toFixed(2)} ${
+    outputString = `${code} @ €${matchingVoucher.value.toFixed(2)} ${
       matchingVoucher.redeemed ? 'redeemed' : 'not redeemed'
     }`;
   }
 
   console.log(
-    `Redeem Voucher(${(new Date() - startTime)
+    `Check Voucher(${(new Date() - startTime)
       .toString()
       .padStart(3, '0')}ms)[${shop}-${till}]: ${outputString}`
   );
