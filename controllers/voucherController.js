@@ -32,6 +32,10 @@ app.get('/api/createVoucher', auth, async (req, res) => {
   let quantity = req.body.quantity;
 
   if (quantity < 1 || quantity === undefined) quantity = 1;
+  if (quantity > 20) {
+    res.status(500).send();
+    return;
+  }
 
   const createdVouchers = [];
 
