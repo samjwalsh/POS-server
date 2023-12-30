@@ -23,6 +23,7 @@ const Voucher = require('../models/vouchers/voucherSchema');
 // })();
 
 app.get('/api/createVoucher', auth, async (req, res) => {
+  const startTime = new Date();
   const shop = req.body.shop;
   const till = req.body.till;
 
@@ -76,10 +77,19 @@ app.get('/api/createVoucher', auth, async (req, res) => {
 
   await Voucher.insertMany(createdVouchers);
 
+  console.log(
+    `Create Vouchers(${(new Date() - startTime)
+      .toString()
+      .padStart(3, '0')}ms)[${shop}-${till}]: ${
+      createdVouchers.length
+    } @ €${createdVouchers[0].value.toFixed(2)}`
+  );
+
   res.status(200).json(createdVouchers);
 });
 
 app.get('/api/redeemVoucher', auth, async (req, res) => {
+  const startTime = new Date();
   const shop = req.body.shop;
   const till = req.body.till;
 
@@ -108,10 +118,25 @@ app.get('/api/redeemVoucher', auth, async (req, res) => {
     return;
   }
 
+  let outputString = '';
+  if (!matchingVoucher) {
+    outputString = `Redeem ${code}, not found`;
+  } else {
+    outputString = `${code} redeemed for €${matchingVoucher.value.toFixed(2)}`;
+  }
+
+  console.log(
+    `Redeem Voucher(${(new Date() - startTime)
+      .toString()
+      .padStart(3, '0')}ms)[${shop}-${till}]: ${outputString}`
+  );
+
   res.status(200).json({ success: true, value: matchingVoucher.value });
 });
 
 app.get('/api/checkVoucher', auth, async (req, res) => {
+  const startTime = new Date();
+
   const shop = req.body.shop;
   const till = req.body.till;
 
@@ -120,6 +145,21 @@ app.get('/api/checkVoucher', auth, async (req, res) => {
   const code = req.body.code.toUpperCase();
 
   const matchingVoucher = await Voucher.findOne({ code });
+
+  let outputString = '';
+  if (!matchingVoucher) {
+    outputString = `Check ${code}, not found`;
+  } else {
+    outputString = `Check ${code} @ €${matchingVoucher.value.toFixed(2)} ${
+      matchingVoucher.redeemed ? 'redeemed' : 'not redeemed'
+    }`;
+  }
+
+  console.log(
+    `Redeem Voucher(${(new Date() - startTime)
+      .toString()
+      .padStart(3, '0')}ms)[${shop}-${till}]: ${outputString}`
+  );
 
   if (matchingVoucher === null) {
     res.status(200).json({ success: true, exists: false });
