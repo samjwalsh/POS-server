@@ -135,7 +135,13 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   // Then create an array of all the unique dates contained within the orders
   let dates = [];
   for (const order of ordersToEodInDb)
-    dates.push(new Date(order.time).toLocaleDateString('en-ie'));
+    dates.push(
+      new Date(order.time).toLocaleDateString('en-ie', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+    );
 
   dates = [...new Set(dates)];
   // put each order into its appropriate day sheet
