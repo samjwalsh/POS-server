@@ -38,7 +38,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   let datesOfAllClientOrders = [];
   for (const order of clientOrders)
     datesOfAllClientOrders.push(
-      new Date(order.time).toLocaleDateString('en-ie')
+      new Date(order.time).toISOString().split('T')[0]
     );
 
   datesOfAllClientOrders = [...new Set(datesOfAllClientOrders)];
@@ -136,11 +136,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   let dates = [];
   for (const order of ordersToEodInDb)
     dates.push(
-      new Date(order.time).toLocaleDateString('en-ie', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      })
+      new Date(order.time).toISOString().split('T')[0]
     );
 
   dates = [...new Set(dates)];
@@ -155,10 +151,11 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     }
 
     const daySheet = await Day.findOne({ date }).exec();
+  
 
     const orders = [];
     for (const order of ordersToEodInDb) {
-      if (new Date(order.time).toLocaleDateString('en-ie') === date) {
+      if (new Date(order.time).toISOString().split('T')[0] === date) {
         orders.push({
           id: order.id,
           time: order.time,
