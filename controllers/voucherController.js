@@ -61,7 +61,7 @@ app.get('/api/createVoucher', auth, async (req, res) => {
     // Now we have our voucher code and we can create the voucher in the DB
 
     const voucher = {
-      dateCreated: new Date().toLocaleDateString('en-ie'),
+      dateCreated: new Date().toISOString().split('T')[0],
       value,
       code,
       redeemed: false,
@@ -97,7 +97,7 @@ app.get('/api/redeemVoucher', auth, async (req, res) => {
     { code },
     {
       redeemed: true,
-      dateRedeemed: new Date().toLocaleDateString('en-ie'),
+      dateRedeemed: new Date().toISOString().split('T')[0],
       shopRedeemed: shop,
       tillRedeemed: till,
     }
