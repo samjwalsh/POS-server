@@ -23,15 +23,18 @@ const Voucher = require('../models/vouchers/voucherSchema');
 // })();
 
 app.get('/api/createVoucher', auth, async (req, res) => {
+  const startTime = new Date();
   const shop = req.body.shop;
   const till = req.body.till;
-
-  console.log(`Create Voucher Request`);
 
   const value = req.body.value;
   let quantity = req.body.quantity;
 
   if (quantity < 1 || quantity === undefined) quantity = 1;
+  if (quantity > 20) {
+    res.status(500).send();
+    return;
+  }
 
   const createdVouchers = [];
 
@@ -58,7 +61,7 @@ app.get('/api/createVoucher', auth, async (req, res) => {
     // Now we have our voucher code and we can create the voucher in the DB
 
     const voucher = {
-      dateCreated: new Date().toLocaleDateString('en-ie'),
+      dateCreated: new Date().toISOString().split('T')[0],
       value,
       code,
       redeemed: false,
@@ -72,14 +75,21 @@ app.get('/api/createVoucher', auth, async (req, res) => {
 
   await Voucher.insertMany(createdVouchers);
 
+  console.log(
+    `Create Vouchers(${(new Date() - startTime)
+      .toString()
+      .padStart(3, '0')}ms)[${shop}-${till}]: ${
+      createdVouchers.length
+    } @ €${createdVouchers[0].value.toFixed(2)}`
+  );
+
   res.status(200).json(createdVouchers);
 });
 
 app.get('/api/redeemVoucher', auth, async (req, res) => {
+  const startTime = new Date();
   const shop = req.body.shop;
   const till = req.body.till;
-
-  console.log(`Redeem Voucher Request`);
 
   const code = req.body.code.toUpperCase();
 
@@ -87,10 +97,25 @@ app.get('/api/redeemVoucher', auth, async (req, res) => {
     { code },
     {
       redeemed: true,
-      dateRedeemed: new Date().toLocaleDateString('en-ie'),
+      dateRedeemed: new Date().toISOString().split('T')[0],
       shopRedeemed: shop,
       tillRedeemed: till,
     }
+  );
+
+  let outputString = '';
+  if (!matchingVoucher) {
+    outputString = `${code} not found`;
+  } else if (matchingVoucher.redeemed) {
+    outputString = `${code} already redeemed`;
+  } else {
+    outputString = `${code} for €${matchingVoucher.value.toFixed(2)}`;
+  }
+
+  console.log(
+    `Redeem Voucher(${(new Date() - startTime)
+      .toString()
+      .padStart(3, '0')}ms)[${shop}-${till}]: ${outputString}`
   );
 
   if (matchingVoucher === null) {
@@ -108,14 +133,29 @@ app.get('/api/redeemVoucher', auth, async (req, res) => {
 });
 
 app.get('/api/checkVoucher', auth, async (req, res) => {
+  const startTime = new Date();
+
   const shop = req.body.shop;
   const till = req.body.till;
-
-  console.log(`Check Voucher Request`);
 
   const code = req.body.code.toUpperCase();
 
   const matchingVoucher = await Voucher.findOne({ code });
+
+  let outputString = '';
+  if (!matchingVoucher) {
+    outputString = `${code} not found`;
+  } else {
+    outputString = `${code} @ €${matchingVoucher.value.toFixed(2)} ${
+      matchingVoucher.redeemed ? 'redeemed' : 'not redeemed'
+    }`;
+  }
+
+  console.log(
+    `Check Voucher(${(new Date() - startTime)
+      .toString()
+      .padStart(3, '0')}ms)[${shop}-${till}]: ${outputString}`
+  );
 
   if (matchingVoucher === null) {
     res.status(200).json({ success: true, exists: false });

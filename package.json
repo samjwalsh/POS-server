@@ -1,6 +1,6 @@
 {
   "name": "pos-server",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "main": "app.js",
   "repository": "https://github.com/samjwalsh/POS-server.git",
   "author": "Sam Walsh <samjwalsh05@gmail.com>",
@@ -15,6 +15,8 @@
     "mongoose": "^8.0.3",
     "nodemon": "^3.0.2",
     "obscenity": "^0.1.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "short-unique-id": "^5.0.3"
   }
 }

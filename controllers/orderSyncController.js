@@ -8,11 +8,6 @@ const auth = require('./authController');
 
 const app = express.Router();
 
-const server = process.env.DB_ADDRESS;
-const user = process.env.DB_USER;
-const pass = process.env.DB_PASS;
-const database = process.env.DB_NAME;
-const dbPort = process.env.DB_PORT;
 const todaysorders = require('../models/todaysorders/todaysOrderSchema');
 const Day = require('../models/daySheets/daySchema');
 
@@ -43,7 +38,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   let datesOfAllClientOrders = [];
   for (const order of clientOrders)
     datesOfAllClientOrders.push(
-      new Date(order.time).toLocaleDateString('en-ie')
+      new Date(order.time).toISOString().split('T')[0]
     );
 
   datesOfAllClientOrders = [...new Set(datesOfAllClientOrders)];
@@ -140,7 +135,9 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   // Then create an array of all the unique dates contained within the orders
   let dates = [];
   for (const order of ordersToEodInDb)
-    dates.push(new Date(order.time).toLocaleDateString('en-ie'));
+    dates.push(
+      new Date(order.time).toISOString().split('T')[0]
+    );
 
   dates = [...new Set(dates)];
   // put each order into its appropriate day sheet
@@ -154,10 +151,11 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     }
 
     const daySheet = await Day.findOne({ date }).exec();
+  
 
     const orders = [];
     for (const order of ordersToEodInDb) {
-      if (new Date(order.time).toLocaleDateString('en-ie') === date) {
+      if (new Date(order.time).toISOString().split('T')[0] === date) {
         orders.push({
           id: order.id,
           time: order.time,
@@ -212,11 +210,13 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     .exec();
 
   console.log(
-    `Sync Orders(${new Date() - startTime}ms)[${shop}-${till}]: ${
-      ordersToAddInDB.length
-    }-${orderIdsToDeleteInDb.length}-${ordersToEodInDb.length} ${
-      ordersToAddInClient.length
-    }-${orderIdsToDeleteInClient.length}-${orderIdsToEodFullyInClient.length}`
+    `Sync Orders(${(new Date() - startTime)
+      .toString()
+      .padStart(3, '0')}ms)[${shop}-${till}]: ${ordersToAddInDB.length}-${
+      orderIdsToDeleteInDb.length
+    }-${ordersToEodInDb.length} ${ordersToAddInClient.length}-${
+      orderIdsToDeleteInClient.length
+    }-${orderIdsToEodFullyInClient.length}`
   );
 
   res.status(200).json({
@@ -228,6 +228,5 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     eodsCompletedInDb: ordersToEodInDb.length,
   });
 });
-
 
 module.exports = app;
