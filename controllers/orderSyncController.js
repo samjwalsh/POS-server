@@ -66,7 +66,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   for (const clientOrder of clientOrders) {
     let orderFoundInDb = false;
     for (const dbOrder of dbOrders) {
-      if (clientOrder.id == dbOrder.id) {
+      if (clientOrder.id === dbOrder.id) {
         // This means the DB has the order
         orderFoundInDb = true;
         // But now check if it is fully up to date with the client
@@ -135,9 +135,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   // Then create an array of all the unique dates contained within the orders
   let dates = [];
   for (const order of ordersToEodInDb)
-    dates.push(
-      new Date(order.time).toISOString().split('T')[0]
-    );
+    dates.push(new Date(order.time).toISOString().split('T')[0]);
 
   dates = [...new Set(dates)];
   // put each order into its appropriate day sheet
@@ -151,7 +149,6 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     }
 
     const daySheet = await Day.findOne({ date }).exec();
-  
 
     const orders = [];
     for (const order of ordersToEodInDb) {

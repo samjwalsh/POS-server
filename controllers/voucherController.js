@@ -14,8 +14,6 @@ const suid = require('short-unique-id');
 const auth = require('./authController');
 const app = express.Router();
 
-const connection = mongoose.connection;
-
 const Voucher = require('../models/vouchers/voucherSchema');
 
 // (async () => {

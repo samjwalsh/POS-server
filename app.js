@@ -25,6 +25,8 @@ app.use(require('./controllers/orderSyncController'));
 
 app.use(require('./controllers/voucherController'));
 
+app.use(require('./controllers/loggingController'));
+
 
 
 app.listen(port, () => {

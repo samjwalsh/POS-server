@@ -11,7 +11,7 @@ let order = new Schema(
       unique: true,
     },
     time: {
-      type: Number,
+      type: Date,
     },
     shop: {
       type: String,
