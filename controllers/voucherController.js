@@ -49,7 +49,7 @@ app.get('/api/createVoucher', auth, async (req, res) => {
     while (!isUnique || !isNotObscene) {
       isUnique = false;
       isNotObscene = false;
-      code = new suid({ dictionary: 'alphanum_upper', length: 5 }).rnd();
+      code = new suid({ dictionary: 'alpha_upper', length: 5 }).rnd();
       const matchingVouchers = await Voucher.find({ code });
       if (matchingVouchers.length === 0) isUnique = true;
 
