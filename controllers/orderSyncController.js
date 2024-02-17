@@ -17,6 +17,10 @@ connection.once('open', function () {
   console.log('MongoDB connection established successfully');
 });
 
+// (async () => {
+//   // code goes here
+// })();
+
 app.get('/api/syncOrders', auth, async (req, res) => {
   const startTime = new Date();
 
@@ -28,7 +32,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   for (const order of allClientOrders) {
     if (order.shop == shop) clientOrders.push(order);
   }
-console.log(clientOrders);
+  console.log(clientOrders);
   const dbOrders = await todaysorders.find({ shop }).exec();
 
   const ordersToAddInDB = [];
