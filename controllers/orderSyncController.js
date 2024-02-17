@@ -20,10 +20,15 @@ connection.once('open', function () {
 app.get('/api/syncOrders', auth, async (req, res) => {
   const startTime = new Date();
 
-  const clientOrders = req.body.orders;
   const shop = req.body.shop;
   const till = req.body.till;
 
+  const clientOrders = [];
+  const allClientOrders = req.body.orders;
+  for (const order of allClientOrders) {
+    if (order.shop == shop) clientOrders.push(order);
+  }
+console.log(clientOrders);
   const dbOrders = await todaysorders.find({ shop }).exec();
 
   const ordersToAddInDB = [];
