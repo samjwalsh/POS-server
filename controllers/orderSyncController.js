@@ -32,7 +32,6 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   for (const order of allClientOrders) {
     if (order.shop == shop) clientOrders.push(order);
   }
-  console.log(clientOrders);
   const dbOrders = await todaysorders.find({ shop }).exec();
 
   const ordersToAddInDB = [];
