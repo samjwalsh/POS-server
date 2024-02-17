@@ -18,7 +18,16 @@ connection.once('open', function () {
 });
 
 // (async () => {
-//   // code goes here
+//   let days = await Day.find();
+//   for (const day of days) {
+//     const time = day.shops[0].orders[0].time;
+//     const date = new Date(time);
+//     day.shops[0].orders[0].time = date;
+//     await Day.updateOne({date: day.date}, day).exec();
+//   }
+//   // const time = days[0].shops[0].orders[0].time;
+//   // const date = new Date(time);
+//   // days[0].shops[0].orders[0].time = date;
 // })();
 
 app.get('/api/syncOrders', auth, async (req, res) => {
