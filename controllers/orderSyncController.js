@@ -123,7 +123,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
 
   try {
     // Add any orders that were missing
-    await todaysorders.insertMany(ordersToAddInDB);
+    await todaysorders.insertMany(ordersToAddInDB, {ordered: false});
   } catch (e) {
     console.log(e);
   }
