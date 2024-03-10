@@ -71,18 +71,41 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     }
   }
 
-  for (const EODedOrder of allEODedOrders) {
-    for (const clientOrder of clientOrders) {
+  for (
+    let EODedOrderIndex = 0;
+    EODedOrderIndex < allEODedOrders.length;
+    EODedOrderIndex++
+  ) {
+    const EODedOrder = allEODedOrders[EODedOrderIndex];
+
+    for (
+      let clientOrderIndex = clientOrders.length - 1;
+      clientOrderIndex >= 0;
+      clientOrderIndex--
+    ) {
+      const clientOrder = clientOrders[clientOrderIndex];
+
       if (EODedOrder.id === clientOrder.id) {
-        clientOrder.eod = true;
+        orderIdsToEodFullyInClient.push(clientOrder.id);
+        clientOrders.splice(clientOrderIndex, 1);
+        break;
       }
     }
   }
 
   // Find orders which are missing in DB or need to be deleted in client or DB
-  for (const clientOrder of clientOrders) {
+  for (
+    let clientOrderIndex = 0;
+    clientOrderIndex < clientOrders.length;
+    clientOrderIndex++
+  ) {
+    const clientOrder = clientOrders[clientOrderIndex];
+
     let orderFoundInDb = false;
-    for (const dbOrder of dbOrders) {
+
+    for (let dbOrderIndex = 0; dbOrderIndex < dbOrders.length; dbOrderIndex++) {
+      const dbOrder = dbOrders[dbOrderIndex];
+
       if (clientOrder.id === dbOrder.id) {
         // This means the DB has the order
         orderFoundInDb = true;
@@ -109,21 +132,28 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   }
 
   // Now find orders which are missing in client
-  for (const dbOrder of dbOrders) {
+  for (let dbOrderIndex = 0; dbOrderIndex < dbOrders.length; dbOrderIndex++) {
+    const dbOrder = dbOrders[dbOrderIndex];
+
     let orderFoundInClient = false;
-    for (const clientOrder of clientOrders)
+    for (
+      let clientOrderIndex = 0;
+      clientOrderIndex < clientOrders.length;
+      clientOrderIndex++
+    ) {
+      const clientOrder = clientOrders[clientOrderIndex];
       if (clientOrder.id === dbOrder.id) {
         orderFoundInClient = true;
         break;
       }
+    }
     if (!orderFoundInClient) {
       ordersToAddInClient.push(dbOrder);
     }
   }
-
   try {
     // Add any orders that were missing
-    await todaysorders.insertMany(ordersToAddInDB, {ordered: false});
+    await todaysorders.insertMany(ordersToAddInDB, { ordered: false });
   } catch (e) {
     console.log(e);
   }
@@ -146,29 +176,41 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     console.log(e);
   }
 
-  // first create an array of all of the orders that we are supposed to EOD
+  // Create an array of all the orders we are supposed to EOD
   const ordersToEodInDb = await todaysorders.find({ shop, eod: true }).exec();
 
-  // Then create an array of all the unique dates contained within the orders
+  // Then create a set of all the unique dates contained within the orders
   let dates = [];
-  for (const order of ordersToEodInDb)
+  for (let orderIndex = 0; orderIndex < ordersToEodInDb.length; orderIndex++) {
+    const order = ordersToEodInDb[orderIndex];
     dates.push(new Date(order.time).toISOString().split('T')[0]);
+  }
 
   dates = [...new Set(dates)];
-  // put each order into its appropriate day sheet
-  for (const date of dates) {
+  // Make sure all of the neccessary day sheets exist
+  for (let dateIndex = 0; dateIndex < dates.length; dateIndex++) {
+    const date = dates[dateIndex];
     if ((await Day.findOne({ date }).exec()) == null) {
-      //create the day sheet
+      // Create the day sheet given it doesnt exist
       const daySheet = new Day();
       daySheet.date = date;
       daySheet.shops = [];
-      await daySheet.save();
+      try {
+        await daySheet.save();
+      } catch (e) {
+        console.log('!! Error creating daySheet !!');
+        // console.log(e);
+      }
     }
 
-    const daySheet = await Day.findOne({ date }).exec();
-
+    // Create the array of orders matching the current date which we can put into the EODsheet.
     const orders = [];
-    for (const order of ordersToEodInDb) {
+    for (
+      let orderIndex = 0;
+      orderIndex < ordersToEodInDb.length;
+      orderIndex++
+    ) {
+      const order = ordersToEodInDb[orderIndex];
       if (new Date(order.time).toISOString().split('T')[0] === date) {
         orders.push({
           id: order.id,
@@ -182,45 +224,76 @@ app.get('/api/syncOrders', auth, async (req, res) => {
         });
       }
     }
-    // Now we have an array of orders that can go into the current daySheet
 
-    // Look for an already created EOD sheet
-    let endOfDaySheetIndex = -1;
+    // Now make sure that the EOD sheet exists inside the daySheet for the given shop
+    const daySheet = await Day.findOne({ date }).exec();
+    let shopIndex = -1;
+    // if (daySheet.shops = )
     for (const [index, endOfDaySheet] of daySheet.shops.entries()) {
-      if (endOfDaySheet.shop === shop) endOfDaySheetIndex = index;
+      if (endOfDaySheet.shop == shop) shopIndex = index;
     }
-    if (endOfDaySheetIndex < 0) {
-      daySheet.shops.push({
-        shop,
-        orders,
-      });
+    // If it doesn't exist create one and fuck all the orders in
+    if (shopIndex < 0) {
+      try {
+        daySheet.shops.push({ shop, orders });
+        await daySheet.save();
+      } catch (e) {
+        console.log('!!Error creating EOD sheet filled with orders!!');
+        // console.log(e);
+      }
     } else {
-      // We need to check that these orders aren't already in the EOD sheet
-      for (const orderToEod of orders) {
-        let unique = true;
-        for (const order of daySheet.shops[endOfDaySheetIndex].orders) {
-          if (order.id === orderToEod.id) {
-            unique = false;
-            // If we know the order isn't unique, we might need to set its deleted flag
-            if (orderToEod.deleted && !order.deleted) {
-              order.deleted = true;
-            }
-            break;
-          }
-        }
-        if (unique) {
-          daySheet.shops[endOfDaySheetIndex].orders.push(orderToEod);
+      const currDaySheet = await Day.findOne({ date }).exec();
+      const alreadyEodedOrders = currDaySheet.shops[shopIndex].orders;
+      for (let orderIndex = orders.length - 1; orderIndex >= 0; orderIndex--) {
+        const orderToEod = orders[orderIndex];
+        const orderEoded = alreadyEodedOrders.filter((order) => {
+          orderToEod.id === order.id;
+        });
+        if (orderEoded) {
+          orders.splice(orderIndex, 1);
+          orderIdsToEodFullyInClient.push(orderToEod.id);
         }
       }
+
+      // Otherwise go in and add each order manually
+      for (let orderIndex = 0; orderIndex < orders.length; orderIndex++) {
+        const orderToEod = orders[orderIndex];
+
+        currDaySheet = await Day.findOne({ date }).exec();
+
+        const orderExists = currDaySheet.shops[shopIndex].orders.filter(
+          (order) => {
+            order.id === orderToEod.id;
+          }
+        );
+        orderIdsToEodFullyInClient.push(orderToEod.id);
+        try {
+          if (!orderExists) {
+            await currDaySheet.shops[shopIndex].push(orderToEod);
+            await currDaySheet.save();
+          }
+        } catch (e) {
+          console.log(e);
+          console.log('!! ERROR INSERTING ORDER INTO DAYSHEET !!');
+        }
+      }
+      // try {
+      //   // daySheet.shops[shopIndex].orders.addToSet(orders);
+      //   await daySheet.save();
+      // } catch (e) {
+      //   console.log('!!Error saving daySheet!!');
+      //   // console.log(e);
+      // }
     }
-    await daySheet.save();
-    for (const order of orders) {
-      orderIdsToEodFullyInClient.push(order.id);
-    }
+    // for (let orderIndex = 0; orderIndex < orders.length; orderIndex++) {
+    //   const orderID = orders[orderIndex].id;
+    //   // console.log(orderID);
+    //   orderIdsToEodFullyInClient.push(orderID);
+    // }
   }
 
   await todaysorders
-    .deleteMany({ id: { $in: orderIdsToEodFullyInClient } })
+    .deleteMany({ id: { $in: orderIdsToEodFullyInClient } }, { ordered: false })
     .exec();
 
   console.log(

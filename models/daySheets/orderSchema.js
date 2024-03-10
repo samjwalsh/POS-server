@@ -7,6 +7,7 @@ const itemSchema = require('../todaysorders/itemSchema');
 let orderSchema = new Schema({
   id: {
     type: String,
+    sparse: true,
     unique: true,
   },
   time: {

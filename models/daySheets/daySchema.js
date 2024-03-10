@@ -12,6 +12,7 @@ let daySchema = new Schema(
     },
     shops: {
       type: [endOfDaySchema],
+      required: true,
     },
   },
   { collection: 'daysheets' }
