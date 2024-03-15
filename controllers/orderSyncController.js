@@ -277,19 +277,12 @@ app.get('/api/syncOrders', auth, async (req, res) => {
           console.log('!! ERROR INSERTING ORDER INTO DAYSHEET !!');
         }
       }
-      // try {
-      //   // daySheet.shops[shopIndex].orders.addToSet(orders);
-      //   await daySheet.save();
-      // } catch (e) {
-      //   console.log('!!Error saving daySheet!!');
-      //   // console.log(e);
-      // }
     }
-    // for (let orderIndex = 0; orderIndex < orders.length; orderIndex++) {
-    //   const orderID = orders[orderIndex].id;
-    //   // console.log(orderID);
-    //   orderIdsToEodFullyInClient.push(orderID);
-    // }
+    for (let orderIndex = 0; orderIndex < orders.length; orderIndex++) {
+      const orderID = orders[orderIndex].id;
+      // console.log(orderID);
+      orderIdsToEodFullyInClient.push(orderID);
+    }
   }
 
   await todaysorders
