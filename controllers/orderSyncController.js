@@ -242,14 +242,14 @@ app.get('/api/syncOrders', auth, async (req, res) => {
         // console.log(e);
       }
     } else {
-      const currDaySheet = await Day.findOne({ date }).exec();
+      let currDaySheet = await Day.findOne({ date }).exec();
       const alreadyEodedOrders = currDaySheet.shops[shopIndex].orders;
       for (let orderIndex = orders.length - 1; orderIndex >= 0; orderIndex--) {
         const orderToEod = orders[orderIndex];
         const orderEoded = alreadyEodedOrders.filter((order) => {
           orderToEod.id === order.id;
         });
-        if (orderEoded) {
+        if (orderEoded.length > 0) {
           orders.splice(orderIndex, 1);
           orderIdsToEodFullyInClient.push(orderToEod.id);
         }
@@ -263,13 +263,13 @@ app.get('/api/syncOrders', auth, async (req, res) => {
 
         const orderExists = currDaySheet.shops[shopIndex].orders.filter(
           (order) => {
-            order.id === orderToEod.id;
+            order.id == orderToEod.id;
           }
         );
         orderIdsToEodFullyInClient.push(orderToEod.id);
         try {
-          if (!orderExists) {
-            await currDaySheet.shops[shopIndex].push(orderToEod);
+          if (orderExists.length < 1) {
+            currDaySheet.shops[shopIndex].orders.push(orderToEod);
             await currDaySheet.save();
           }
         } catch (e) {
@@ -277,19 +277,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
           console.log('!! ERROR INSERTING ORDER INTO DAYSHEET !!');
         }
       }
-      // try {
-      //   // daySheet.shops[shopIndex].orders.addToSet(orders);
-      //   await daySheet.save();
-      // } catch (e) {
-      //   console.log('!!Error saving daySheet!!');
-      //   // console.log(e);
-      // }
     }
-    // for (let orderIndex = 0; orderIndex < orders.length; orderIndex++) {
-    //   const orderID = orders[orderIndex].id;
-    //   // console.log(orderID);
-    //   orderIdsToEodFullyInClient.push(orderID);
-    // }
   }
 
   await todaysorders
