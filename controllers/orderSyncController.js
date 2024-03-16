@@ -235,6 +235,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     // If it doesn't exist create one and fuck all the orders in
     if (shopIndex < 0) {
       try {
+        console.log('doing em all at once');
         daySheet.shops.push({ shop, orders });
         await daySheet.save();
       } catch (e) {
@@ -261,16 +262,26 @@ app.get('/api/syncOrders', auth, async (req, res) => {
 
         currDaySheet = await Day.findOne({ date }).exec();
 
-        const orderExists = currDaySheet.shops[shopIndex].orders.filter(
-          (order) => {
-            order.id == orderToEod.id;
-          }
+        // const orderExists = currDaySheet.shops[shopIndex].orders.filter(
+        //   (order) => {
+        //     // console.log(order.id == orderToEod.id)
+        //     order.id == orderToEod.id;
+        //   }
+        // );
+
+        const orderExists = currDaySheet.shops[shopIndex].orders.findIndex(
+          (order) => order.id == orderToEod.id
         );
         orderIdsToEodFullyInClient.push(orderToEod.id);
         try {
-          if (orderExists.length < 1) {
-            currDaySheet.shops[shopIndex].orders.push(orderToEod);
+          if (orderExists < 0) {
+            currDaySheet.shops[shopIndex].orders.nonAtomicPush(orderToEod);
+            // currDaySheet.shops[shopIndex].orders.addToSet(orderToEod);
+            // currDaySheet.shops[shopIndex].orders.push(orderToEod);
             await currDaySheet.save();
+            console.log('added order manually');
+          } else {
+            console.log('skipped adding order');
           }
         } catch (e) {
           console.log(e);

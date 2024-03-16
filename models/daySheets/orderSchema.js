@@ -8,6 +8,7 @@ let orderSchema = new Schema({
   id: {
     type: String,
     unique: true,
+    index: true,
   },
   time: {
     type: Date,
