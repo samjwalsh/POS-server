@@ -17,290 +17,227 @@ connection.once('open', function () {
   console.log('MongoDB connection established successfully');
 });
 
-// (async () => {
-//   let days = await Day.find();
-//   for (const day of days) {
-//     const time = day.shops[0].orders[0].time;
-//     const date = new Date(time);
-//     day.shops[0].orders[0].time = date;
-//     await Day.updateOne({date: day.date}, day).exec();
+// function quicksort(array) {
+//   if (array.length <= 1) {
+//     return array;
 //   }
-//   // const time = days[0].shops[0].orders[0].time;
-//   // const date = new Date(time);
-//   // days[0].shops[0].orders[0].time = date;
-// })();
+
+//   var pivot = array[0];
+
+//   var left = [];
+//   var right = [];
+
+//   for (var i = 1; i < array.length; i++) {
+//     array[i] < pivot ? left.push(array[i]) : right.push(array[i]);
+//   }
+
+//   return quicksort(left).concat(pivot, quicksort(right));
+// };
+
 
 app.get('/api/syncOrders', auth, async (req, res) => {
   const startTime = new Date();
+
+  const timer = new Timer();
+  timer.time('Request Started')
 
   const shop = req.body.shop;
   const till = req.body.till;
 
   const clientOrders = [];
   const allClientOrders = req.body.orders;
-  for (const order of allClientOrders) {
-    if (order.shop == shop) clientOrders.push(order);
-  }
+
   const dbOrders = await todaysorders.find({ shop }).exec();
 
   const ordersToAddInDB = [];
   const orderIdsToDeleteInDb = [];
-  const orderIdsToEodInDb = [];
+  const ordersToEodInDB = [];
 
   const ordersToAddInClient = [];
   const orderIdsToDeleteInClient = [];
   const orderIdsToEodFullyInClient = [];
 
-  // check if any of the orders sent by the client are supposed to be EODed, and if they are mark them as EOD in todaysorders so that they will then be eoded again and the correct IDs will be sent back to the client
-  let datesOfAllClientOrders = [];
-  for (const order of clientOrders)
-    datesOfAllClientOrders.push(
+  timer.time('Initialise Variables (DB Access)');
+
+  let datesOfAllClientOrders = new Set();
+  // Remove any orders which do not belong to the shop
+  let clientOrderIndex = 0;
+  let clientOrdersLength = allClientOrders.length;
+  while (clientOrderIndex < clientOrdersLength) {
+    const order = allClientOrders[clientOrderIndex];
+    clientOrderIndex++;
+
+    // Skip the order if its shop doesn't match the shop sent by the till
+    if (order.shop !== shop) continue;
+    // Add the client order to a new array now that we know it matches the shop
+    clientOrders.push(order);
+    // Create a set of all the dates of all the client orders, so that we can find all the required EODed orders
+    datesOfAllClientOrders.add(
       new Date(order.time).toISOString().split('T')[0]
     );
-
-  datesOfAllClientOrders = [...new Set(datesOfAllClientOrders)];
-
-  const daySheets = await Day.find({ date: { $in: datesOfAllClientOrders } });
-  let allEODedOrders = [];
-
-  for (const daySheet of daySheets) {
-    for (const EodSheet of daySheet.shops) {
-      if (EodSheet.shop === shop) {
-        allEODedOrders = allEODedOrders.concat(EodSheet.orders);
-      }
-    }
   }
+  // Convert set to array because mongoose doesnt like sets
+  datesOfAllClientOrders = [...datesOfAllClientOrders];
+  timer.time('Collect dates of all client orders');
 
-  for (
-    let EODedOrderIndex = 0;
-    EODedOrderIndex < allEODedOrders.length;
-    EODedOrderIndex++
-  ) {
-    const EODedOrder = allEODedOrders[EODedOrderIndex];
+  const days = await Day.find({ date: { $in: datesOfAllClientOrders } });
+  timer.time('Retrieve the relevant day sheets (DB Access)');
 
-    for (
-      let clientOrderIndex = clientOrders.length - 1;
-      clientOrderIndex >= 0;
-      clientOrderIndex--
-    ) {
-      const clientOrder = clientOrders[clientOrderIndex];
+  // Run through each daysheet to extract the orders which match the shop which have already been end of dayed
 
-      if (EODedOrder.id === clientOrder.id) {
-        orderIdsToEodFullyInClient.push(clientOrder.id);
-        clientOrders.splice(clientOrderIndex, 1);
-        break;
-      }
-    }
-  }
+  // TODO could be better to first sort the orders into arrays of each date, so that we are not comparing orders that we know aren't going to be in a certain eod sheet
 
-  // Find orders which are missing in DB or need to be deleted in client or DB
-  for (
-    let clientOrderIndex = 0;
-    clientOrderIndex < clientOrders.length;
-    clientOrderIndex++
-  ) {
-    const clientOrder = clientOrders[clientOrderIndex];
+  let dayIndex = 0;
+  const daysLength = days.length;
+  while (dayIndex < daysLength) {
+    const day = days[dayIndex];
+    dayIndex++;
 
-    let orderFoundInDb = false;
+    let shopIndex = 0;
+    const noShops = day.shops.length;
+    while (shopIndex < noShops) {
+      const EODSheet = day.shops[shopIndex];
+      shopIndex++;
+      if (EODSheet.shop !== shop) continue;
+      // If we find an order here it means that it has been EODed in the db but not the client, so we should find it in the client and tell them to EOD it fully
+      let EODOrderIndex = 0;
+      const EODOrdersLength = EODSheet.orders.length;
+      while (EODOrderIndex < EODOrdersLength) {
+        const EODOrder = EODSheet.orders[EODOrderIndex];
+        EODOrderIndex++;
 
-    for (let dbOrderIndex = 0; dbOrderIndex < dbOrders.length; dbOrderIndex++) {
-      const dbOrder = dbOrders[dbOrderIndex];
+        let clientOrderIndex = 0;
+        const clientOrdersLength = clientOrders.length;
+        while (clientOrderIndex < clientOrdersLength) {
+          const clientOrder = clientOrders[clientOrderIndex];
+          clientOrderIndex++;
 
-      if (clientOrder.id === dbOrder.id) {
-        // This means the DB has the order
-        orderFoundInDb = true;
-        // But now check if it is fully up to date with the client
-        // Check if it is deleted on client but not DB
-        if (clientOrder.deleted && !dbOrder.deleted) {
-          orderIdsToDeleteInDb.push(dbOrder.id);
-        } else if (!clientOrder.deleted && dbOrder.deleted) {
-          // Check if it is deleted on DB but not client
-          orderIdsToDeleteInClient.push(dbOrder.id);
+          if (EODOrder.id !== clientOrder.id) continue;
+          // Here we have found an order that the client sent which is in an existing EOD sheet, so we neet to instruct the client to delete it
+          orderIdsToEodFullyInClient.push(clientOrder.id);
+          // Remove the order from future calculations
+          clientOrders.splice(clientOrderIndex, 1);
+          break;
         }
-
-        if (clientOrder.eod && !dbOrder.eod) {
-          orderIdsToEodInDb.push(dbOrder.id);
-        }
-
-        break;
       }
     }
-    // Given the order is missing, check if should be added to todays orders and if it should be EODed after
-    if (!orderFoundInDb) {
-      ordersToAddInDB.push(clientOrder);
-    }
   }
 
-  // Now find orders which are missing in client
-  for (let dbOrderIndex = 0; dbOrderIndex < dbOrders.length; dbOrderIndex++) {
-    const dbOrder = dbOrders[dbOrderIndex];
+  timer.time('Finding orders which should be EODed on client');
 
-    let orderFoundInClient = false;
-    for (
-      let clientOrderIndex = 0;
-      clientOrderIndex < clientOrders.length;
-      clientOrderIndex++
-    ) {
-      const clientOrder = clientOrders[clientOrderIndex];
-      if (clientOrder.id === dbOrder.id) {
-        orderFoundInClient = true;
-        break;
-      }
-    }
-    if (!orderFoundInClient) {
-      ordersToAddInClient.push(dbOrder);
-    }
-  }
-  try {
-    // Add any orders that were missing
-    await todaysorders.insertMany(ordersToAddInDB, { ordered: false });
-  } catch (e) {
-    console.log(e);
-  }
 
-  try {
-    // Delete any orders that should havebeen deleted
-    await todaysorders
-      .updateMany({ id: { $in: orderIdsToDeleteInDb } }, { deleted: true })
-      .exec();
-  } catch (e) {
-    console.log(e);
-  }
 
-  try {
-    // EOD any orders that should have been EODed
-    await todaysorders
-      .updateMany({ id: { $in: orderIdsToEodInDb } }, { eod: true })
-      .exec();
-  } catch (e) {
-    console.log(e);
-  }
+  const clientSorted = insertionSort(clientOrders);
+  // timer.time('Sorted client orders');
+  const dbSorted = insertionSort(dbOrders);
+  // timer.time('Sorted db orders');
+//TODO
 
-  // Create an array of all the orders we are supposed to EOD
-  const ordersToEodInDb = await todaysorders.find({ shop, eod: true }).exec();
+  let clientIndex = 0;
+  clientOrdersLength = clientSorted.length;
+  let dbIndex = 0;
+  const dbOrdersLength = dbSorted.length;
+  let continues = true;
+  while (continues) {
+    let comparison;
+    let clientOrder;
+    let dbOrder;
 
-  // Then create a set of all the unique dates contained within the orders
-  let dates = [];
-  for (let orderIndex = 0; orderIndex < ordersToEodInDb.length; orderIndex++) {
-    const order = ordersToEodInDb[orderIndex];
-    dates.push(new Date(order.time).toISOString().split('T')[0]);
-  }
-
-  dates = [...new Set(dates)];
-  // Make sure all of the neccessary day sheets exist
-  for (let dateIndex = 0; dateIndex < dates.length; dateIndex++) {
-    const date = dates[dateIndex];
-    if ((await Day.findOne({ date }).exec()) == null) {
-      // Create the day sheet given it doesnt exist
-      const daySheet = new Day();
-      daySheet.date = date;
-      daySheet.shops = [];
-      try {
-        await daySheet.save();
-      } catch (e) {
-        console.log('!! Error creating daySheet !!');
-        // console.log(e);
-      }
-    }
-
-    // Create the array of orders matching the current date which we can put into the EODsheet.
-    const orders = [];
-    for (
-      let orderIndex = 0;
-      orderIndex < ordersToEodInDb.length;
-      orderIndex++
-    ) {
-      const order = ordersToEodInDb[orderIndex];
-      if (new Date(order.time).toISOString().split('T')[0] === date) {
-        orders.push({
-          id: order.id,
-          time: order.time,
-          shop: order.shop,
-          till: order.till,
-          deleted: order.deleted,
-          subtotal: order.subtotal,
-          paymentMethod: order.paymentMethod,
-          items: order.items,
-        });
-      }
-    }
-
-    // Now make sure that the EOD sheet exists inside the daySheet for the given shop
-    const daySheet = await Day.findOne({ date }).exec();
-    let shopIndex = -1;
-    // if (daySheet.shops = )
-    for (const [index, endOfDaySheet] of daySheet.shops.entries()) {
-      if (endOfDaySheet.shop == shop) shopIndex = index;
-    }
-    // If it doesn't exist create one and fuck all the orders in
-    if (shopIndex < 0) {
-      try {
-        console.log('doing em all at once');
-        daySheet.shops.push({ shop, orders });
-        await daySheet.save();
-      } catch (e) {
-        console.log('!!Error creating EOD sheet filled with orders!!');
-        // console.log(e);
-      }
+    const endOfDB = dbIndex === dbOrdersLength;
+    const endOfClient = clientIndex === clientOrdersLength;
+    if (endOfClient && endOfDB) break;
+    if (endOfClient) {
+      // DB has more orders to give to client
+      dbOrder = dbSorted[dbIndex];
+      comparison = -1;
+    } else if (endOfDB) {
+      // Client has more orders to give to DB
+      clientOrder = clientSorted[clientIndex];
+      comparison = 1;
     } else {
-      let currDaySheet = await Day.findOne({ date }).exec();
-      const alreadyEodedOrders = currDaySheet.shops[shopIndex].orders;
-      for (let orderIndex = orders.length - 1; orderIndex >= 0; orderIndex--) {
-        const orderToEod = orders[orderIndex];
-        const orderEoded = alreadyEodedOrders.filter((order) => {
-          orderToEod.id === order.id;
-        });
-        if (orderEoded.length > 0) {
-          orders.splice(orderIndex, 1);
-          orderIdsToEodFullyInClient.push(orderToEod.id);
-        }
-      }
+      clientOrder = clientSorted[clientIndex];
+      dbOrder = dbSorted[dbIndex];
+      comparison = compare(clientOrder, dbOrder);
+    }
 
-      // Otherwise go in and add each order manually
-      for (let orderIndex = 0; orderIndex < orders.length; orderIndex++) {
-        const orderToEod = orders[orderIndex];
+    if (comparison === 1) {
+      // console.log('DB missing order');
+      // Here the client order is older than the db order, so it must mean that the db is missing this order?
+      ordersToAddInDB.push(clientOrder);
+      clientIndex++;
+    } else if (comparison === -1) {
+      // console.log('Client missing order');
+      // Here the db order is older than the client order, so it must mean that the client is missing this order?
+      ordersToAddInClient.push(dbOrder);
+      dbIndex++;
+    } else {
+      // Here the orders are matching, but it means we have to do our standard checks for deletions or EODs
+      // console.log('Orders Match')
+      if (clientOrder.deleted && !dbOrder.deleted)
+        orderIdsToDeleteInDb.push(dbOrder.id);
+      else if (!clientOrder.deleted && dbOrder.deleted)
+        orderIdsToDeleteInClient.push(clientOrder.id);
 
-        currDaySheet = await Day.findOne({ date }).exec();
+      if (clientOrder.eod && !dbOrder.eod) ordersToEodInDD.push(dbOrder);
 
-        // const orderExists = currDaySheet.shops[shopIndex].orders.filter(
-        //   (order) => {
-        //     // console.log(order.id == orderToEod.id)
-        //     order.id == orderToEod.id;
-        //   }
-        // );
-
-        const orderExists = currDaySheet.shops[shopIndex].orders.findIndex(
-          (order) => order.id == orderToEod.id
-        );
-        orderIdsToEodFullyInClient.push(orderToEod.id);
-        try {
-          if (orderExists < 0) {
-            currDaySheet.shops[shopIndex].orders.nonAtomicPush(orderToEod);
-            // currDaySheet.shops[shopIndex].orders.addToSet(orderToEod);
-            // currDaySheet.shops[shopIndex].orders.push(orderToEod);
-            await currDaySheet.save();
-            console.log('added order manually');
-          } else {
-            console.log('skipped adding order');
-          }
-        } catch (e) {
-          console.log(e);
-          console.log('!! ERROR INSERTING ORDER INTO DAYSHEET !!');
-        }
-      }
+      if (clientIndex < clientOrdersLength) clientIndex++;
+      if (dbIndex < dbOrdersLength) dbIndex++;
     }
   }
 
-  await todaysorders
-    .deleteMany({ id: { $in: orderIdsToEodFullyInClient } }, { ordered: false })
-    .exec();
+  timer.time('Compared orders');
+
+
+  // // And EOD any orders in the DB which were done in the client
+  // // TODO what if instead of this we just used the list of eodable orders above and went to the db with that.
+  // // It would stop every request to the server from other clients causing it to attempt to eod again
+  // // but what if it goes wrong, we rely on the client who sent the eod request to send more eod requests?
+  // // Is the only situation this wouldnt work when the client who initially sent the eod request goes offline AND if the server crashes and is unable to complete the initial request?
+  // // Maybe instead consider a boolean which is set to true if there is an eod already happening? But what if two different shops want to eod at the same time
+
+  // So then we can actually add it
+  if (ordersToAddInDB.length !== 0) {
+    try {
+      await todaysorders.insertMany(ordersToAddInDB, { ordered: false });
+    } catch (e) {
+      console.log(e);
+    }
+  }
+  timer.time('Added orders missing in DB (DB Access)');
+
+  if (orderIdsToDeleteInDb.length !== 0) {
+    try {
+      await todaysorders
+        .updateMany({ id: { $in: orderIdsToDeleteInDb } }, { deleted: true })
+        .exec();
+    } catch (e) {
+      console.log(e);
+    }
+  }
+  timer.time('Marked orders in DB as deleted (DB Access)');
+
+  if (ordersToEodInDB.length !== 0) {
+    try {
+      await todaysorders
+        .updateMany({ id: { $in: ordersToEodInDB } }, { eod: true })
+        .exec();
+    } catch (e) {
+      console.log(e);
+    }
+  }
+  timer.time('Marked orders in DB as EOD (DB Access)');
+
+  // Now we have to do the whole thing where if the client has asked to eod some orders we will do it for them
+  // create an array of orders to EOD, should have been done up above
+  // Each time we successfully eod an order we should put its id into another array and delete all of the todaysorders which match
+  // Grab a list of all the orders in the daysheet, 
 
   console.log(
     `Sync Orders(${(new Date() - startTime)
       .toString()
       .padStart(3, '0')}ms)[${shop}-${till}]: ${ordersToAddInDB.length}-${
       orderIdsToDeleteInDb.length
-    }-${ordersToEodInDb.length} ${ordersToAddInClient.length}-${
+    }-${ordersToEodInDB.length} ${ordersToAddInClient.length}-${
       orderIdsToDeleteInClient.length
     }-${orderIdsToEodFullyInClient.length}`
   );
@@ -311,8 +248,48 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     completedEodIds: orderIdsToEodFullyInClient,
     ordersMissingInDb: ordersToAddInDB.length,
     ordersDeletedInDb: orderIdsToDeleteInDb.length,
-    eodsCompletedInDb: ordersToEodInDb.length,
+    eodsCompletedInDb: ordersToEodInDB.length,
   });
 });
+
+const compare = (order1, order2) => {
+  if (order1.id === order2.id) return 0;
+  if (order1.id < order2.id) return 1;
+  else return -1;
+};
+
+const insertionSort = (inputArr) => {
+  for (let i = 1; i < inputArr.length; i++) {
+    let key = inputArr[i];
+    let id = key.id;
+    let j = i - 1;
+    while (j >= 0 && inputArr[j].id > id) {
+      inputArr[j + 1] = inputArr[j];
+      j = j - 1;
+    }
+    inputArr[j + 1] = key;
+  }
+  return inputArr;
+};
+
+const Timer = class {
+  static quantity = 0;
+  #number;
+  #start;
+  constructor() {
+    Timer.quantity++;
+    this.number = Timer.quantity;
+    this.start = new Date();
+  }
+  time(message) {
+    let now = new Date();
+    console.log(
+      `${this.number}:${(now - this.start)
+        .toString()
+        .padStart(5, ' ')} - ${message}`
+    );
+    this.start = now;
+  }
+};
 
 module.exports = app;
