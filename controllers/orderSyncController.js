@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 const ch = require('chalk');
 const auth = require('./authController');
 
-const { cF, logger } = require('../utils');
+const { cF, logger, Timer } = require('../utils');
 
 const app = express.Router();
 
@@ -42,7 +42,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   const orderIdsToDeleteInClient = [];
   let orderIdsToEodFullyInClient = new Set();
 
-  timer.time('Initialise Variables (DB Access)');
+  timer.time('Initialised Variables (DB Access)');
 
   let datesOfAllClientOrders = new Set();
   // Remove any orders which do not belong to the shop
@@ -64,7 +64,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   }
   // Convert set to array because mongoose doesnt like sets
   datesOfAllClientOrders = [...datesOfAllClientOrders];
-  timer.time('Collect dates of all client orders');
+  timer.time('Created set of dates and recorded X-Total');
 
   if (datesOfAllClientOrders.length !== 0) {
     const days = await Day.find({ date: { $in: datesOfAllClientOrders } });
@@ -112,14 +112,13 @@ app.get('/api/syncOrders', auth, async (req, res) => {
         }
       }
     }
+    timer.time('Found orders which should be EODed on client');
   }
-
-  timer.time('Finding orders which should be EODed on client');
 
   const clientSorted = insertionSort(clientOrders);
   timer.time('Sorted client orders');
   const dbSorted = insertionSort(dbOrders);
-  timer.time('Sorted db orders');
+  timer.time('Sorted DB orders');
   //TODO
 
   let clientIndex = 0;
@@ -217,7 +216,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     timer.time('Marked orders in DB as EOD (DB Access)');
   }
   ordersToEodInDB = await todaysorders.find({ shop, eod: true }).exec();
-  timer.time('Checking if need to EOD orders (DB Access)');
+  timer.time('Checked if need to EOD orders (DB Access)');
 
   if (ordersToEodInDB.length !== 0 && doingEOD === false) {
     doingEOD = true;
@@ -335,6 +334,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
       }
     }
     doingEOD = false;
+    timer.time('Completed EOD')
   }
 
   orderIdsToEodFullyInClient = [...orderIdsToEodFullyInClient];
@@ -367,44 +367,41 @@ app.get('/api/syncOrders', auth, async (req, res) => {
 
   const addDB =
     ordersToAddInDB.length > 0
-      ? ch.green.italic(ordersToAddInDB.length)
+      ? ch.green.bold(ordersToAddInDB.length)
       : ch.dim(0);
   const delDB =
     orderIdsToDeleteInDb.length > 0
-      ? ch.red.italic(orderIdsToDeleteInDb.length)
+      ? ch.red.bold(orderIdsToDeleteInDb.length)
       : ch.dim(0);
   const eodDB =
     ordersToEodInDB.length > 0
-      ? ch.yellow.italic(ordersToEodInDB.length)
+      ? ch.yellow.bold(ordersToEodInDB.length)
       : ch.dim(0);
   const addCl =
     ordersToAddInClient.length > 0
-      ? ch.green.italic(ordersToAddInClient.length)
+      ? ch.green.bold(ordersToAddInClient.length)
       : ch.dim(0);
   const delCl =
     orderIdsToDeleteInClient.length > 0
-      ? ch.red.italic(orderIdsToDeleteInClient.length)
+      ? ch.red.bold(orderIdsToDeleteInClient.length)
       : ch.dim(0);
   const eodCl =
     orderIdsToEodFullyInClient.length > 0
-      ? ch.yellow.italic(orderIdsToEodFullyInClient.length)
+      ? ch.yellow.bold(orderIdsToEodFullyInClient.length)
       : ch.dim(0);
 
   const orders = req.body.orders.length;
 
   const xStr = `${ch.green(cF(x))}`;
 
-  // console.log(
-  //   `${shopStr} ${ch.cyan(
-  //     'Sync'
-  //   )} ${duration} [${orders}] ${xStr}\n S|${addDB} ${delDB} ${eodDB}\n C|${addCl} ${delCl} ${eodCl}`
-  // );
+  timer.time('Done')
 
+  const lifetime = timer.end();
   logger(
     shop,
     till,
     'Sync',
-    startTime,
+    lifetime,
     `[${orders}] ${xStr}`,
     totalUpdates > 0
       ? ` S|${addDB} ${delDB} ${eodDB}\n C|${addCl} ${delCl} ${eodCl}`
@@ -439,28 +436,6 @@ const insertionSort = (inputArr) => {
     inputArr[j + 1] = key;
   }
   return inputArr;
-};
-
-const Timer = class {
-  static quantity = 0;
-  #number;
-  #start;
-  constructor() {
-    if (process.env.ENV !== 'DEV') return;
-    Timer.quantity++;
-    this.number = Timer.quantity;
-    this.start = new Date();
-  }
-  time(message) {
-    if (process.env.ENV !== 'DEV') return;
-    let now = new Date();
-    console.log(
-      `${this.number}:${(now - this.start)
-        .toString()
-        .padStart(5, ' ')} - ${message}`
-    );
-    this.start = now;
-  }
 };
 
 module.exports = app;

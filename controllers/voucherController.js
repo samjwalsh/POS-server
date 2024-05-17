@@ -87,7 +87,7 @@ app.get('/api/createVoucher', auth, async (req, res) => {
     shop,
     till,
     'Create Vouchers',
-    startTime,
+    Date.now() - startTime,
     `${createdVouchers.length} @ ${ch.green(
       '€' + createdVouchers[0].value.toFixed(2)
     )}`,
@@ -134,7 +134,7 @@ app.get('/api/redeemVoucher', auth, async (req, res) => {
     outputString = `${code} - €${matchingVoucher.value.toFixed(2)}`;
   }
 
-  logger(shop, till, 'Redeem Voucher', startTime, ``, outputString);
+  logger(shop, till, 'Redeem Voucher', Date.now() - startTime, ``, outputString);
 
   res.status(200).json({ success: true, value: matchingVoucher.value });
 });
@@ -158,7 +158,7 @@ app.get('/api/checkVoucher', auth, async (req, res) => {
     }`;
   }
 
-  logger(shop, till, 'Check Voucher', startTime, ``, outputString);
+  logger(shop, till, 'Check Voucher', Date.now() - startTime, ``, outputString);
 
 
   if (matchingVoucher === null) {
