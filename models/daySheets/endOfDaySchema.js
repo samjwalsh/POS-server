@@ -8,9 +8,7 @@ let endOfDaySchema = new Schema({
   shop: {
     type: String,
   },
-  orders: {
-    type: [orderSchema],
-  }
+  orders: [orderSchema]
 });
 
 module.exports = endOfDaySchema;
