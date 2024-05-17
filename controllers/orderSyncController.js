@@ -6,6 +6,8 @@ const mongoose = require('mongoose');
 const ch = require('chalk');
 const auth = require('./authController');
 
+const { cF, logger } = require('../utils');
+
 const app = express.Router();
 
 const todaysorders = require('../models/todaysorders/todaysOrderSchema');
@@ -252,7 +254,6 @@ app.get('/api/syncOrders', auth, async (req, res) => {
           await daySheet.save();
           timer.time('Created day sheet (DB Access)');
         } catch (e) {
-          console.log('1');
           console.log(e);
         }
       }
@@ -275,9 +276,9 @@ app.get('/api/syncOrders', auth, async (req, res) => {
           );
 
           timer.time('Created filled EOD sheet (DB Access)');
-          console.log('***********filled eod sheet');
+          // console.log('***********filled eod sheet');
         } catch (e) {
-          console.log('2');
+          // console.log('2');
           console.log(e);
         }
       } else {
@@ -357,42 +358,47 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   // Grab a list of all the orders in the daysheet,
 
   const addDB =
-    ordersToAddInDB.length > 0 ? ch.green(ordersToAddInDB.length) : ch.dim(0);
+    ordersToAddInDB.length > 0
+      ? ch.green.italic(ordersToAddInDB.length)
+      : ch.dim(0);
   const delDB =
     orderIdsToDeleteInDb.length > 0
-      ? ch.red(orderIdsToDeleteInDb.length)
+      ? ch.red.italic(orderIdsToDeleteInDb.length)
       : ch.dim(0);
   const eodDB =
-    ordersToEodInDB.length > 0 ? ch.yellow(ordersToEodInDB.length) : ch.dim(0);
+    ordersToEodInDB.length > 0
+      ? ch.yellow.italic(ordersToEodInDB.length)
+      : ch.dim(0);
   const addCl =
     ordersToAddInClient.length > 0
-      ? ch.green(ordersToAddInClient.length)
+      ? ch.green.italic(ordersToAddInClient.length)
       : ch.dim(0);
   const delCl =
     orderIdsToDeleteInClient.length > 0
-      ? ch.red(orderIdsToDeleteInClient.length)
+      ? ch.red.italic(orderIdsToDeleteInClient.length)
       : ch.dim(0);
   const eodCl =
     orderIdsToEodFullyInClient.length > 0
-      ? ch.yellow(orderIdsToEodFullyInClient.length)
+      ? ch.yellow.italic(orderIdsToEodFullyInClient.length)
       : ch.dim(0);
-
-  const shopStr = ch.magenta(
-    shop.substring(0, 2).toUpperCase().concat('-').concat(till)
-  );
-
-  const duration = ch.dim.italic(
-    (new Date() - startTime).toString().padStart(3, '0') + 'ms'
-  );
 
   const orders = req.body.orders.length;
 
   const xStr = `${ch.green(cF(x))}`;
 
-  console.log(
-    `${shopStr} ${ch.dim(
-      'Sync'
-    )} ${duration} S|${addDB} ${delDB} ${eodDB} C|${addCl} ${delCl} ${eodCl} [${orders}] ${xStr}`
+  // console.log(
+  //   `${shopStr} ${ch.cyan(
+  //     'Sync'
+  //   )} ${duration} [${orders}] ${xStr}\n S|${addDB} ${delDB} ${eodDB}\n C|${addCl} ${delCl} ${eodCl}`
+  // );
+
+  logger(
+    shop,
+    till,
+    'Sync',
+    startTime,
+    `[${orders}] ${xStr}`,
+    ` S|${addDB} ${delDB} ${eodDB}\n C|${addCl} ${delCl} ${eodCl}`
   );
 
   res.status(200).json({
@@ -445,16 +451,6 @@ const Timer = class {
     );
     this.start = now;
   }
-};
-
-const Euro = Intl.NumberFormat('en-IE', {
-  style: 'currency',
-  currency: 'EUR',
-});
-
-const cF = (n) => {
-  if (typeof n !== 'number') n = parseFloat(n);
-  return Euro.format(n);
 };
 
 module.exports = app;

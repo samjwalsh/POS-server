@@ -2,13 +2,17 @@ const dotenv = require('dotenv');
 dotenv.config({ path: __dirname + '/.env' });
 
 const express = require('express');
-const mongoose = require('mongoose');
+
+const ch = require('chalk');
+
+const { logger } = require('../utils');
 
 const {
   RegExpMatcher,
   englishDataset,
   englishRecommendedTransformers,
 } = require('obscenity');
+
 const suid = require('short-unique-id');
 
 const auth = require('./authController');
@@ -73,12 +77,21 @@ app.get('/api/createVoucher', auth, async (req, res) => {
 
   await Voucher.insertMany(createdVouchers);
 
-  console.log(
-    `Create Vouchers(${(new Date() - startTime)
-      .toString()
-      .padStart(3, '0')}ms)[${shop}-${till}]: ${
-      createdVouchers.length
-    } @ €${createdVouchers[0].value.toFixed(2)}`
+  const shopStr = ch.underline.magenta(shop.concat(' ').concat(till));
+
+  const duration = ch.dim(
+    (new Date() - startTime).toString().padStart(3, '0') + 'ms'
+  );
+
+  logger(
+    shop,
+    till,
+    'Create Vouchers',
+    startTime,
+    `${createdVouchers.length} @ ${ch.green(
+      '€' + createdVouchers[0].value.toFixed(2)
+    )}`,
+    ` ${createdVouchers.map((voucher) => voucher.code).join('\n ')}`
   );
 
   res.status(200).json(createdVouchers);
@@ -101,21 +114,6 @@ app.get('/api/redeemVoucher', auth, async (req, res) => {
     }
   );
 
-  let outputString = '';
-  if (!matchingVoucher) {
-    outputString = `${code} not found`;
-  } else if (matchingVoucher.redeemed) {
-    outputString = `${code} already redeemed`;
-  } else {
-    outputString = `${code} for €${matchingVoucher.value.toFixed(2)}`;
-  }
-
-  console.log(
-    `Redeem Voucher(${(new Date() - startTime)
-      .toString()
-      .padStart(3, '0')}ms)[${shop}-${till}]: ${outputString}`
-  );
-
   if (matchingVoucher === null) {
     res.status(200).json({ success: false });
     return;
@@ -126,6 +124,17 @@ app.get('/api/redeemVoucher', auth, async (req, res) => {
       .json({ success: false, dateRedeemed: matchingVoucher.dateRedeemed });
     return;
   }
+
+  let outputString = '';
+  if (!matchingVoucher) {
+    outputString = `${code} not found`;
+  } else if (matchingVoucher.redeemed) {
+    outputString = `${code} already redeemed`;
+  } else {
+    outputString = `${code} - €${matchingVoucher.value.toFixed(2)}`;
+  }
+
+  logger(shop, till, 'Redeem Voucher', startTime, ``, outputString);
 
   res.status(200).json({ success: true, value: matchingVoucher.value });
 });
@@ -144,16 +153,13 @@ app.get('/api/checkVoucher', auth, async (req, res) => {
   if (!matchingVoucher) {
     outputString = `${code} not found`;
   } else {
-    outputString = `${code} @ €${matchingVoucher.value.toFixed(2)} ${
-      matchingVoucher.redeemed ? 'redeemed' : 'not redeemed'
+    outputString = `${code} - €${matchingVoucher.value.toFixed(2)} ${
+      matchingVoucher.redeemed ? 'Redeemed' : 'Not Redeemed'
     }`;
   }
 
-  console.log(
-    `Check Voucher(${(new Date() - startTime)
-      .toString()
-      .padStart(3, '0')}ms)[${shop}-${till}]: ${outputString}`
-  );
+  logger(shop, till, 'Check Voucher', startTime, ``, outputString);
+
 
   if (matchingVoucher === null) {
     res.status(200).json({ success: true, exists: false });
