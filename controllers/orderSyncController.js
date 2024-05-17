@@ -357,6 +357,14 @@ app.get('/api/syncOrders', auth, async (req, res) => {
   // Each time we successfully eod an order we should put its id into another array and delete all of the todaysorders which match
   // Grab a list of all the orders in the daysheet,
 
+  const totalUpdates =
+    ordersToAddInDB.length +
+    orderIdsToDeleteInDb.length +
+    ordersToEodInDB.length +
+    ordersToAddInClient.length +
+    orderIdsToDeleteInClient.length +
+    orderIdsToEodFullyInClient.length;
+
   const addDB =
     ordersToAddInDB.length > 0
       ? ch.green.italic(ordersToAddInDB.length)
@@ -398,7 +406,9 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     'Sync',
     startTime,
     `[${orders}] ${xStr}`,
-    ` S|${addDB} ${delDB} ${eodDB}\n C|${addCl} ${delCl} ${eodCl}`
+    totalUpdates > 0
+      ? ` S|${addDB} ${delDB} ${eodDB}\n C|${addCl} ${delCl} ${eodCl}`
+      : false
   );
 
   res.status(200).json({

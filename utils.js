@@ -15,9 +15,8 @@ const logger = (shop, till, action, startTime, topRow, bottomRow) => {
   const duration = ch.dim(
     (new Date() - startTime).toString().padStart(3, '0') + 'ms'
   );
-  console.log(
-    `${shopStr} ${ch.cyan(action)} ${duration} ${topRow}\n${bottomRow}\n`
-  );
+  console.log(`${shopStr} ${ch.cyan(action)} ${duration} ${topRow}\n`);
+  if (bottomRow) console.log(`${bottomRow}\n`);
 };
 
 module.exports = { cF, logger };
