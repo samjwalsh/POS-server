@@ -56,11 +56,11 @@ app.get('/api/syncOrders', auth, async (req, res) => {
     if (order.shop !== shop) continue;
     // Add the client order to a new array now that we know it matches the shop
     clientOrders.push(order);
-    x += order.subtotal;
     // Create a set of all the dates of all the client orders, so that we can find all the required EODed orders
     datesOfAllClientOrders.add(
       new Date(order.time).toISOString().split('T')[0]
     );
+    if (!order.deleted) x += order.subtotal;
   }
   // Convert set to array because mongoose doesnt like sets
   datesOfAllClientOrders = [...datesOfAllClientOrders];
@@ -334,7 +334,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
       }
     }
     doingEOD = false;
-    timer.time('Completed EOD')
+    timer.time('Completed EOD');
   }
 
   orderIdsToEodFullyInClient = [...orderIdsToEodFullyInClient];
@@ -394,7 +394,7 @@ app.get('/api/syncOrders', auth, async (req, res) => {
 
   const xStr = `${ch.green(cF(x))}`;
 
-  timer.time('Done')
+  timer.time('Done');
 
   const lifetime = timer.end();
   logger(
