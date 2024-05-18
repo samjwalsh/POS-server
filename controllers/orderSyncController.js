@@ -2,7 +2,6 @@ const dotenv = require('dotenv');
 dotenv.config({ path: __dirname + '/.env' });
 
 const express = require('express');
-const mongoose = require('mongoose');
 const ch = require('chalk');
 const auth = require('./authController');
 
@@ -13,11 +12,6 @@ const app = express.Router();
 const todaysorders = require('../models/todaysorders/todaysOrderSchema');
 const Day = require('../models/daySheets/daySchema');
 
-const connection = mongoose.connection;
-
-connection.once('open', function () {
-  console.log('MongoDB connection established successfully');
-});
 let doingEOD = false;
 app.get('/api/syncOrders', auth, async (req, res) => {
   const startTime = new Date();

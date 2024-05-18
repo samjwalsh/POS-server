@@ -5,6 +5,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const app = express();
 const port = process.env.PORT;
+const ch = require('chalk');
 
 app.use(express.json({ limit: '50mb' }));
 
@@ -17,6 +18,13 @@ const uri = `mongodb://${user}:${pass}@${server}:${dbPort}/${database}?authSourc
 
 mongoose.connect(uri);
 
+const connection = mongoose.connection;
+
+connection.once('open', function () {
+  console.log(`Connected to DB`);
+  console.log(`${ch.cyan('_'.repeat(22))}`)
+});
+
 app.get('/api/connectionTest', (req, res) => {
   res.send(`${process.env.NAME} online`);
 });
@@ -27,8 +35,6 @@ app.use(require('./controllers/voucherController'));
 
 app.use(require('./controllers/loggingController'));
 
-
-
 app.listen(port, () => {
-  console.log(`POS-server listening on port ${port}`);
+  console.log(`Server up on port ${ch.green(port)}`);
 });
