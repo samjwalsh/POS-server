@@ -25,11 +25,11 @@ const Timer = class {
   #start;
   #lifetime;
   constructor() {
+    this.lifetime = new Date();
     if (process.env.ENV !== 'DEV') return;
     Timer.quantity++;
     this.number = Timer.quantity;
     this.start = new Date();
-    this.lifetime = new Date();
   }
   time(message) {
     if (process.env.ENV !== 'DEV') return;
